@@ -21,22 +21,31 @@ int getConnect(){
 }
 
 int main(){
-    log("connect to server ");
+    log("connect to server\n");
     int conn = getConnect();
     if(conn == -1){
+        log("connect to server failed!\n");
+        strerror(errno);
         exit(1);
     }
     char buf[1024];
+    char str[1024];
     bzero(buf,sizeof(buf));
     size_t len = sizeof(buf);
     int num = 0;
-    char* hello ="are you ok?";
+    char* hello ="are you ok?\n";
     int out_len =strlen(hello)+1;
     memcpy(buf,hello,strlen(hello));
-    write(conn,buf,out_len);
+    log("send data to server:\n");
+    int snd = write(conn,buf,strlen(hello));
+    memset(buf,0,sizeof(buf));
+    sprintf(buf,"send data to server size :%d\n",snd);
+    log(buf);
+    log("waiting for data from server:\n");
     while((num =read(conn,buf,len)) >0){
-        log(buf);
-        break;
+        memset(str,0,sizeof(str));
+        sprintf(str,"received data : %s\n",buf);
+        log(str);
     }
     log("1");
     close(conn);
