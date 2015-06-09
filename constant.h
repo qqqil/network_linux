@@ -14,7 +14,7 @@
 #include <string.h>
 
 #ifndef SERV_PORT
-#define SERV_PORT 7000
+#define SERV_PORT 5555
 #endif
 
 #ifndef INADDR_ANY

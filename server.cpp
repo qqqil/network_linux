@@ -13,17 +13,14 @@ void log(char * str){
 }
 void str_echo(int sockfd){
     ssize_t n;
-    char buf[MAXLINE];
+    char buf[512];
     char str[1024];
     log("child process server for connect\n");
     again:
-    while((n=read(sockfd,buf,1)) > 0) {
-        log(buf);
-        sprintf(str,"recvd data: %s\n","data from server");
-        log(str);
-        write(sockfd,buf,n);
-    }
-    log("read data finished!\n");
+    n = read(sockfd,buf,sizeof(buf));
+    printf("RCVD DATA:%s(%d bytes)\n",buf,n);
+
+    write(sockfd,buf,n);
     if(n<0 && errno == EINTR){
         goto again;
     }
@@ -31,7 +28,7 @@ void str_echo(int sockfd){
         printf("str_echo:read_error");
     }
     close(sockfd);
-    log("close client connection\n");
+    printf("close client %d connection\n",sockfd);
 }
 
 int main(){
@@ -52,8 +49,11 @@ int main(){
     int ret = bind(listenFd,(struct sockaddr *)&serverAddr,sizeof(serverAddr));
     sprintf(str,"listen to port %d\n",SERV_PORT);
     log(str);
-    listen(listenFd,16);
-
+    ret = listen(listenFd,16);
+    if(ret == -1){
+        printf("listen to fd failed for %s\n",strerror(errno));
+        return 1;
+    }
     while(true){
         chilen = sizeof(childaddr);
         connFd = accept(listenFd,(struct sockaddr *)&childaddr,&chilen);
@@ -64,7 +64,6 @@ int main(){
             str_echo(connFd);
             exit(0);
         }
-        close(connFd);
     }
     close(listenFd);
 
