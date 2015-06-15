@@ -1,6 +1,9 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/select.h>
+#include <sys/time.h>
+#include <unistd.h>
 
 #include <strings.h>
 
@@ -37,22 +40,51 @@ void str_echo(int sockfd){
     log("close client connection\n");
 }
 
+void init_select(int listen){
+   fd_set rfds; 
+   FD_ZERO(&rfds);
+    FD_SET(listen,&rfds);
+
+    struct timeval tv;
+    tv.tv_sec =5;
+    tv.tv_usec =0;
+    
+    int fd_max=0;
+
+    fd_max = 1;
+
+    while((ret = select(fd_max,&rfds,NULL,NULL,&tv))!=-1){
+        for(int i=0;i<fd_max;i++){
+            if(FD_ISSET(i,&rfds)){
+            
+            }
+        } 
+    }
+
+}
 int main(){
     int listenFd,connFd;
     pid_t childpid;
     socklen_t chilen;
     struct sockaddr_in childaddr,serverAddr;
     char str[1024];
+    int ret=-1;
     bzero(str,sizeof(str));
     listenFd = socket(AF_INET,SOCK_STREAM,0);
 
     bzero(&serverAddr,sizeof(serverAddr));
+    
+    ret = setsockopt(listenFd,SOL_SOCKET,SO_REUSEADDR,&listenFd,sizeof(listenFd));
+    if(ret == -1){
+        perror("set socket reuseaddr failed!\n");
+        exit(1);
+    }
 
     serverAddr.sin_family = AF_INET;
     serverAddr.sin_addr.s_addr = htonl(INADDR_ANY);
     serverAddr.sin_port = htons(SERV_PORT);
 
-    int ret = bind(listenFd,(struct sockaddr *)&serverAddr,sizeof(serverAddr));
+    ret = bind(listenFd,(struct sockaddr *)&serverAddr,sizeof(serverAddr));
     if(ret == -1){
         printf("bind to port failed!\n");
         exit(1);

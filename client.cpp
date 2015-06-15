@@ -47,7 +47,6 @@ int main(){
         scanf("%s",buf);
         log(buf);
         int snd = write(conn,buf,strlen(buf));
-        memset(buf,0,sizeof(buf));
         sprintf(buf,"send data to server size :%d\n",snd);
         log(buf);
     }
@@ -62,7 +61,7 @@ int main(){
     //     log(str);
     memset(buf,0,sizeof(buf));
     num =recv(conn,buf,sizeof(buf),0);
-    printf("RCVD DATA:%s\n",buf);
+    printf("RCVD DATA:%s (%d(bytes))\n",buf,num);
     close(conn);
     return 0;
 }
