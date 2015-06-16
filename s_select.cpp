@@ -20,6 +20,7 @@ void str_echo(int sockfd){
     char buf[MAXLINE];
     char str[1024];
     log("child process server for connect\n");
+    printf("client id %d \n",sockfd);
     again:
     bzero(buf,sizeof(buf));
     while((n=recv(sockfd,buf,sizeof(buf),0)) > 0) {
@@ -36,14 +37,12 @@ void str_echo(int sockfd){
     else if(n <0){
         printf("str_echo:read_error");
     }
-    close(sockfd);
     log("close client connection\n");
 }
+#define max(x,y) (x)<(y)?(y):(x)
 
 void init_select(int listen){
    fd_set rfds; 
-   FD_ZERO(&rfds);
-    FD_SET(listen,&rfds);
 
     struct timeval tv;
     tv.tv_sec =5;
@@ -51,16 +50,51 @@ void init_select(int listen){
     
     int fd_max=0;
 
-    fd_max = 1;
-
-    while((ret = select(fd_max,&rfds,NULL,NULL,&tv))!=-1){
+    fd_max = max(listen,0)+1;
+    int ret = -1;
+    int fds[256];
+    bzero(fds,sizeof(fds));
+    fds[listen]=1;
+    while(1){
+        FD_ZERO(&rfds);
+        for(int i=0;i<256;i++){
+            if(fds[i]==1){
+                FD_SET(i,&rfds);
+            }
+        }
+        ret = select(fd_max,&rfds,NULL,NULL,&tv);
+        if(ret == -1){
+            break;
+        }
+        if(ret ==0){
+            continue;
+        }
+        printf("get data from client\n");
         for(int i=0;i<fd_max;i++){
             if(FD_ISSET(i,&rfds)){
-            
+                if(listen == i){
+                    //accept
+                    int client = accept(i,NULL,NULL);
+                    if(client != -1){
+                        fd_max = max(fd_max,client)+1;
+                        fds[client]=1;
+                        printf("accept connection from select: %d\n",client);
+                    }else{
+                        printf("accept connectioin is invalid\n");
+                    }
+                }else{
+                    str_echo(i);
+                    fds[i]=0;
+                    FD_CLR(i,&rfds);
+                    close(i);
+                }
             }
         } 
+        printf("waiting for connection..\n");
     }
-
+    printf("exit select loop\n");
+    strerror(errno);
+    close(listen);
 }
 int main(){
     int listenFd,connFd;
@@ -96,18 +130,6 @@ int main(){
         printf("listen to fd failed for %s\n",strerror(errno));
         return 1;
     }
-    while(true){
-        chilen = sizeof(childaddr);
-        connFd = accept(listenFd,(struct sockaddr *)&childaddr,&chilen);
-        sprintf(str,"accept from client for client fd: %d\n",connFd);
-        log(str);
-        if((childpid = fork())==0){
-            close(listenFd);
-            str_echo(connFd);
-            exit(0);
-        }
-    }
-    close(listenFd);
-
+    init_select(listenFd);
     return 0;
 }
