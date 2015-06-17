@@ -25,4 +25,9 @@
 #define MAXLINE 100
 #endif
 
+
+#ifndef OPEN_MAX
+#define OPEN_MAX 512
+#endif
+
 #endif
