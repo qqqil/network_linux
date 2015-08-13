@@ -1,14 +1,23 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "net.h"
+class Test{
+public:
+    Test(){
+        log("test constructor");
+    }
+    ~Test(){
+        log("test distory");
+    }
+    void showMsg(){
+        log("haha");
+    }
+};
 int main()
 {
-    char buf[1024];
-    memset(buf,0,sizeof(buf));
-    printf("please input:\n");
-    scanf("%s",buf);
-    
-    printf("%s\n",buf);
-
+    log("hello world");
+    Test t;
+    t.showMsg();
     return 0;
 }
