@@ -1,81 +1,102 @@
-#include <stdlib.h>
-#include <sys/types.h>
-#include <sys/socket.h>
+#include "server.h"
+#include <time.h>
 
-#include <strings.h>
-
-
-#include "constant.h"
+#include "clockutils.h"
+#include "select.h"
 
 
-
-void log(char * str){
-    printf("%s\n",str);
+Server::Server()
+{
+    sock.setSock(sock.create_and_listen(sock.getIp()));
 }
-void str_echo(int sockfd){
-    ssize_t n;
-    char buf[MAXLINE];
-    char str[1024];
-    log("child process server for connect\n");
-    again:
-    bzero(buf,sizeof(buf));
-    while((n=recv(sockfd,buf,sizeof(buf),0)) > 0) {
-        log(buf);
-        sprintf(str,"recvd data: %s\n","data from server");
-        log(str);
-        write(sockfd,buf,n);
-        bzero(buf,sizeof(buf));//clear recieved data from the buffer 
-    }
-    log("read data finished!\n");
-    if(n<0 && errno == EINTR){
-        goto again;
-    }
-    else if(n <0){
-        printf("str_echo:read_error");
-    }
-    close(sockfd);
-    log("close client connection\n");
+
+int Server::start_service(sockaddr_in& addr, socklen_t& len)
+{
+    return sock.start_accept(addr,len);
 }
+
+string Server::read(int fd)
+{
+    return sock.read(fd);
+}
+
+int Server::write(string data)
+{
+    return sock.write(data);
+}
+Socket& Server::getSocket(){
+    return sock;
+}
+#define SELECT
 
 int main(){
-    int listenFd,connFd;
-    pid_t childpid;
-    socklen_t chilen;
-    struct sockaddr_in childaddr,serverAddr;
-    char str[1024];
-    bzero(str,sizeof(str));
-    listenFd = socket(AF_INET,SOCK_STREAM,0);
+    Logger::info("server start..");
+    class Server server;
 
-    bzero(&serverAddr,sizeof(serverAddr));
+    struct sockaddr_in client_addr;
 
-    serverAddr.sin_family = AF_INET;
-    serverAddr.sin_addr.s_addr = htonl(INADDR_ANY);
-    serverAddr.sin_port = htons(SERV_PORT);
-
-    int ret = bind(listenFd,(struct sockaddr *)&serverAddr,sizeof(serverAddr));
-    if(ret == -1){
-        printf("bind to port failed!\n");
-        exit(1);
-    }
-    sprintf(str,"listen to port %d\n",SERV_PORT);
-    log(str);
-    ret = listen(listenFd,16);
-    if(ret == -1){
-        printf("listen to fd failed for %s\n",strerror(errno));
-        return 1;
-    }
-    while(true){
-        chilen = sizeof(childaddr);
-        connFd = accept(listenFd,(struct sockaddr *)&childaddr,&chilen);
-        sprintf(str,"accept from client for client fd: %d\n",connFd);
-        log(str);
-        if((childpid = fork())==0){
-            close(listenFd);
-            str_echo(connFd);
-            exit(0);
+    socklen_t client_len;
+    ClockUtils clock;
+    clock.start();
+    int count =0 ;
+    int maxfds =FD_SETSIZE ;
+    Select select;
+    select.zero(select.get_rset());
+    select.zero(select.get_wset());
+    select.zero(select.get_exp_set());
+    int server_fd = server.getSocket().getSock();
+    select.set(server.getSocket().getSock(),select.get_rset());
+    for(int i=0;i<10;i++){
+#ifdef NORM
+        int client = server.start_service(client_addr,client_len);
+        if(client == -1){
+            Logger::error("accept failed!");
+            exit(-1);
         }
+        string msg = inet_ntoa(client_addr.sin_addr);
+        Logger::info("accept client:"+ msg+" - "+std::to_string(count++));
+        string data;
+        data = server.read(client);
+        Logger::info(data);
+        close(client);
+#endif
+#ifdef SELECT
+    Logger::info("-0-");
+    fd_set active_set;
+    std::cout<<server.getSocket().getSock()<<std::endl;
+    FD_ZERO(&active_set);
+    //FD_SET(server_fd,&active_set);
+    //std::cout<<"server fd ="<<server_fd<<std::endl;
+    int ret =-1;//= ::select(FD_SETSIZE,&active_set,NULL,NULL,NULL);
+    Logger::info("-1-");
+    ret = select.select(maxfds);
+    if(ret == -1){
+        Logger::error("select error");
+        continue;
     }
-    close(listenFd);
-
-    return 0;
+    for(int i =0;i<maxfds;i++){
+           if(select.is_set(i,select.get_rset())){
+                if(i == server.getSocket().getSock()){
+                    int client = server.start_service(client_addr,client_len);
+                    if(client == -1){
+                        Logger::error("accept failed!");
+                        continue;
+                    }
+                    Logger::info("accept a new connection..");
+                    std::cout<<client<<std::endl;
+                    select.set(client,select.get_rset());
+                }else{
+                    Logger::info("receive data ..");
+                    string data = server.read(i);
+                    Logger::info(data);
+                    close(i);
+                    select.clear(i,select.get_rset());
+                }
+           }
+    }
+    //select.set_rset(active_set);
+#endif
+    }
+    clock.end();
+    std::cout<<"Duration:"<<clock.getDuration()<<std::endl;
 }
