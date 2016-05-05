@@ -26,9 +26,9 @@ int Client::connect(string ip)
     return ret;
 }
 
-string Client::read(int fd)
+string Client::read()
 {
-    return sock.read(fd);
+    return sock.read(sock.getSock());
 }
 
 int Client::write(string data)
@@ -36,10 +36,14 @@ int Client::write(string data)
     return sock.write(data);
 }
 
+Socket Client::getSock(){
+    return sock;
+}
+
 int main(){
 
-    Logger::info("clien start to connect..");
-    for(int i=0;i<10;i++){
+    Logger::info("client start to connect..");
+    for(int i=0;i<1000;i++){
         Client client;
         string ip="192.168.1.101";
 
@@ -50,6 +54,13 @@ int main(){
             exit(1);
         }
         client.write("hello ,girl!");
+        string ss;
+        ss = client.read();
+        Logger::info("Receive data from server :"+ss);
+        std::cout<<"For :";
+        std::cout<<i;
+        std::cout<<" times";
+        std::cout<<std::endl;
         ThreadUtils::sleep(100);
     }
 }

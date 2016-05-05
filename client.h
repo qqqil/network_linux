@@ -8,8 +8,9 @@ public:
     Client();
     ~Client();
     int connect(string ip);
-    string read(int fd);
+    string read();
     int write(string data);
+    Socket getSock();
 private:
     class Socket sock;
 };

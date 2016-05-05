@@ -46,7 +46,7 @@ int main(){
     select.zero(select.get_exp_set());
     int server_fd = server.getSocket().getSock();
     select.set(server.getSocket().getSock(),select.get_rset());
-    for(int i=0;i<10;i++){
+    for(int i=0;i<1000;i++){
 #ifdef NORM
         int client = server.start_service(client_addr,client_len);
         if(client == -1){
@@ -89,6 +89,7 @@ int main(){
                     Logger::info("receive data ..");
                     string data = server.read(i);
                     Logger::info(data);
+                    server.write("this is a test data from server");
                     close(i);
                     select.clear(i,select.get_rset());
                 }

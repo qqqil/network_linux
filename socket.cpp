@@ -24,6 +24,9 @@ int Socket::create_and_listen(string ip)
         Logger::error("bind ip failed!");
         exit(-1);
     }
+    if(setsockopt(sock,SOL_SOCKET,(SO_REUSEPORT | SO_REUSEADDR),NULL,0)==-1){
+        Logger::error("set socket option failed!");
+    }
     ret = listen(sock, max_clients);
     if(ret == -1){
         Logger::error("listen to sock failed!");
@@ -82,6 +85,7 @@ string Socket::read(int fd)
         for(int i=0;i<num;i++){
             str+=buff[i];
         }
+        Logger::info("DATA:"+str);
     }
     Logger::info("DATA:"+str);
 
